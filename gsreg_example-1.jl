@@ -3,13 +3,13 @@
 
 ## data here:
 using Distributions, Plots, StatsPlots
-n = 100
+n = 1000
 x = randn(n)
 y = 1.0 .+ 0.5.*x .+ 0.4.*randn(n)
 plot(x,y,st=:scatter)
 
 ## AR(1) DGP
-phi = 1.0
+phi = 1.001
 z = zeros(n+20)
 for t = 2:(n+20)
     z[t] = 0.0 + phi*z[t-1] + randn(1)[1]
@@ -17,6 +17,8 @@ end
 y = z[21:(n+20)]
 plot(y)
 
+yt = y[2:end]
+yt1 = y[1:end-1]
 
 ############################################### 
 
@@ -27,18 +29,18 @@ include("gsreg.jl")
 b = [0.0; 0.0]    # prior coeff. means
 iB = inv([0.0001 0.0; 0.0 0.0001]) 
 
-X = [ones(n) x]
-bdraws,s2draws = gsreg(y,X)
+X = [ones(n-1) yt1]
+bdraws,s2draws = gsreg(yt,X)
 
-plot(bdraws[:,2], st=:density, fill=true, alpha=0.5, title = "β posterior", label= "uninformative" )
+plot(bdraws[:,2], st=:density, fill=true, alpha=0.5, title = "phi posterior")
 mean(bdraws[:,2])
 std(bdraws[:,2])
 quantile(bdraws[:,2],[0.025,0.975])
 
-plot(bdraws[:,1], st=:density, fill=true, alpha=0.5, title = "α posterior", label= "uninformative" )
-mean(bdraws[:,1])
-std(bdraws[:,1])
-quantile(bdraws[:,1],[0.025,0.975])
+plot(s2draws[:,1], st=:density, fill=true, alpha=0.5, title = "sigma^2 posterior" )
+mean(s2draws[:,1])
+std(s2draws[:,1])
+quantile(s2draws[:,1],[0.025,0.975])
 
 # Informative prior (still uninformative for variance parameter)
 b = [0.0; 1.0]    # prior coeff. means
@@ -81,3 +83,6 @@ plot(bdraws[:,2], st=:density, fill=true, alpha=0.5, title = "phi posterior", la
 mean(bdraws[:,2])
 std(bdraws[:,2])
 quantile(bdraws[:,2],[0.025,0.975])
+
+
+

@@ -1,13 +1,13 @@
 # Packages used
 using CSV, DataFrames, Plots, StatsPlots, Distributions, LinearAlgebra
-using Turing, StatsFuns, Statistics
+using Turing, StatsFuns, Statistics, PrettyTables
 
 # set path to working directory
 # Mac
 #cd("/Users/millsja/OneDrive - University of Cincinnati/Class/9011 2022")
 
 # Windows
-cd("I:\\Econ 9011 2022")
+#cd("I:\\Econ 9011 2022")
 #cd("C:\\Users\\millsjf\\OneDrive - University of Cincinnati\\Class\\9011 2022")
 
 # Surface - local copy
@@ -15,6 +15,16 @@ cd("I:\\Econ 9011 2022")
 #cd("C:\\Users\\millsjf\\OneDrive for Business\\FIESTAA\\FiESTAA_GI_AEs")
 
 
+function pval(vector)
+    pval = 2*(1 - sum(vector .< 0.0)/(size(vector,1)))
+    if pval > 1.0
+        return pval = round(2-pval,digits=4)
+    else
+        return round(pval,digits=4)
+    end
+end
+
+""" old version of pval function:
 function pval(vector)
     if typeof(vector) == Matrix{Float64}
         pval = zeros(size(vector, 2))
@@ -36,7 +46,7 @@ function pval(vector)
     end
     return pval
 end
-
+"""
 
 function linreg(x, y)
     blinreg = x \ y
@@ -85,7 +95,6 @@ By default alpha=0.05 for a 2-sided tail area of p < 0.025% and p > 0.975%.
 function hpdi(x::Vector{T}; alpha=0.05) where {T<:Real}
     n = length(x)
     m = max(1, ceil(Int, alpha * n))
-
     y = sort(x)
     a = y[1:m]
     b = y[(n - m + 1):n]
@@ -192,11 +201,13 @@ function embed(x, p)
     return m
 end
 
+println("Functions loaded")
 
 #dfmo = DataFrame(CSV.File("FiESTAA_07-20.csv")) # original data
-dfm = DataFrame(CSV.File("FiESTAA_07_20_cleaned.csv")) # cleaned data
-show(names(dfm))
+#dfm = DataFrame(CSV.File("FiESTAA_07_20_cleaned.csv")) # cleaned data
+#show(names(dfm))
 
+#=
 
 # example use of Turing for regression
 
@@ -220,12 +231,14 @@ end
 n = 50
 b = [1; 1]
 s = 1.0
-
+x = [ones(n) randn(n)]
+u = randn(n)
 y2 = x * b .+ u
 k = length(b)
 
 # creating lags
-yp = embed(y, p)
+p = 2
+yp = embed(y2, p)
 xt = xtlag(x, p)
 X = [yp[:, 2:end] xt]
 Y = yp[:, 1]
@@ -234,11 +247,11 @@ model_lm = lm(y2, x)
 
 s = 2000
 Turing.setprogress!(true)
-@time cc = sample(model, NUTS(0.65), s)
-@time cc_sc = sample(model_sc, NUTS(0.65), s)
+# @time cc = sample(model, NUTS(0.65), s)
+# @time cc_sc = sample(model_sc, NUTS(0.65), s)
 @time cc_lm = sample(model_lm, NUTS(0.65), s)
 
-table(cc)[2]
+table(cc_lm)[2]
 
 # Is there a difference in these groups?
 # What if we double the same size, but keep proportions the same?
@@ -310,3 +323,5 @@ vector = dif
 sum(vector[:, 1] .< 0.0)
 sum(vector .< 0.0)
 length(vector[vector .< 0])
+
+=#
