@@ -207,3 +207,4 @@ end
 
 summary_mcmc_array(bs,coefnames)
 
+
