@@ -1,4 +1,4 @@
-# gsres function example
+# cointegration example
 cd("C:\\Users\\millsjf\\OneDrive - University of Cincinnati\\Class\\9011 2024")
 
 ## data here:
@@ -7,8 +7,27 @@ using Turing, StatsFuns, Statistics, Random #, PrettyTables
 
 # use for cointegration and spurious regression
 Random.seed!(123)
+include("useful_functions_mcmc.jl")
 
-n = 100
+# spurious regression
+n = 200
+x = randn(n)
+y = rand(FDist(50,5), n)
+plot(y)
+plot(y, st =:density)
+
+cor(x,y)
+
+X = cumsum(x)
+Y = cumsum(y)
+
+xx = [ones(length(X)) X]
+coefnames = ["cnst" "beta"]
+blinreg, b2se, tstats, pvals, Rsq, sigma2_hat, cril, criu = linreg(xx,Y)
+print_regression(blinreg, b2se, pvals, Rsq, cril, criu, coefnames)
+
+resid = xx*blinreg
+plot(resid)
 
 ## AR(1) DGP
 N = 200
@@ -23,18 +42,84 @@ for t = 2:(n)
 end
 
 plot(z[11:(end-10)])
-# x0 = randn(n)
+
+# cointegrated variables
+n = 200
+z = randn(n)
+plot(z)
 x = cumsum(z)
-y = 1.0 .+ 0.2.*x .+ 20.0.*randn(n)
+y = 1.0 .+ 0.5.*x .+ 0.6.*randn(n)
 plot(x,y,st=:scatter)
 
 plot(x, label = "x")
 plot!(y, label = "y")
 
+# For whether I(1) or I(2), look at the difference!
+dx = diff(x)
+plot(dx, label = "Δx")
 
 
+
+# Engle-Granger methodology
+ # 1. determine if all the variables are I(1)  (or I(2))
+  # 1. visual inspection - does it look stationary
+  # 2. ADF test (and other unit root tests)
+  # - null is I(1) here! = AR(1) coefficient = 1
+  # If the AR(1) coefficient is one or greater, then the variable is 
+  # nonstationary - problem, the OLS estimator is also nonstationary then, 
+  # hence ADF test with a wierd distribution.
+  # ADF test has low power as a consequence - it's also asymptotic
+  # requires a lot of data!
+  # Bayesian approach = just do a standard t-test on the AR(1) coefficient
+  # because no dichotomy when the coefficient reaches 1 or greater.
+
+original_x = x
+x = dx
+
+xt = x[2:end]
+xt1 = x[1:(end-1)]   
+xx = [ones(length(xt)) xt1]
+coefnames = ["cnst" "beta"]
+blinreg, b2se, tstats, pvals, Rsq, sigma2_hat, cril, criu = linreg(xx,xt)
+print_regression(blinreg, b2se, pvals, Rsq, cril, criu, coefnames)
+
+
+ # 2. estimate the cointegrating relationship
+x = original_x
+xx = [ones(length(x)) x]
+coefnames = ["cnst" "beta"]
+blinreg, b2se, tstats, pvals, Rsq, sigma2_hat, cril, criu = linreg(xx,y)
+print_regression(blinreg, b2se, pvals, Rsq, cril, criu, coefnames)
+
+#b_draws = blinreg[2] .+ b2se[2].*rand(TDist(length(xt)-2), 1000000)
+#plot(b_draws, st = :density, fill = true)
+#vline!([1.0], label=false)
+
+#prob_ge_one = length(b_draws[b_draws .>= 1.0])/length(b_draws)
+
+# 3. Determine if the residuals from the above regression are stationary
+resid = y .- xx*blinreg
+resid = Y .- xx*blinreg  # for the noncointegrated variables
+plot(resid)
+q95 = quantile(resid, [0.025,0.975])
+hline!([q95[1] q95[2] mean(resid)])
 include("useful_functions_mcmc.jl")
+# test if resids are I(0)
+# frequentist approach uses the absolutely awful ADF test again!
+# we don't! - we do a standard t-test
 
+xt = resid[2:end]
+xt1 = resid[1:(end-1)]   
+xx = [ones(length(xt)) xt1]
+coefnames = ["cnst" "beta"]
+blinreg, b2se, tstats, pvals, Rsq, sigma2_hat, cril, criu = linreg(xx,xt)
+print_regression(blinreg, b2se, pvals, Rsq, cril, criu, coefnames)
+
+b_draws = blinreg[2] .+ b2se[2].*rand(TDist(length(xt)-2), 1000000)
+plot(b_draws, st = :density, fill = true)
+vline!([1.0], label=false)
+prob_ge_one = length(b_draws[b_draws .>= 1.0])/length(b_draws)
+1 - prob_ge_one
 
 # Estimate the model
 model = ma1(y)
@@ -235,7 +320,7 @@ end
     end
 end
 
-include("useful_functions_mcmc.jl")
+
 
 
 # Estimate the model
